@@ -18,7 +18,7 @@ gemspec = Gem::Specification.new do |s|
   s.version = Bitcask::VERSION
   s.author = 'Kyle Kingsbury'
   s.email = 'aphyr@aphyr.com'
-  s.homepage = 'https://github.com/aphyr/bitcask'
+  s.homepage = 'https://github.com/aphyr/bitcask-ruby'
   s.platform = Gem::Platform::RUBY
   s.summary = 'An (incomplete) interface to the Bitcask storage system'
  
