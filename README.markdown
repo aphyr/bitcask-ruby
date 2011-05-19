@@ -5,6 +5,14 @@ Utilities for reading the Bitcask file format. You can use this to recover
 deleted values (before they are compacted), recover from a backup, list keys
 to do read-repair when list-keys is malfunctioning, and so forth.
 
+Install
+-------
+
+    $ gem install bitcask
+
+Examples
+--------
+
 Open a bitcask.
 
     b = Bitcask.new '/var/lib/riak/bitcask/0'
@@ -54,6 +62,9 @@ In Riak, these are erlang terms.
     end
 
 You'd be surprised how fast this is. 10,000 values/sec, easy.
+
+Status
+------
 
 Anyone who wants to expand this, feel free. I've been using it for emergency
 recovery operations, but don't plan to reimplement bitcask in Ruby myself. I
