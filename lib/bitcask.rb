@@ -3,8 +3,9 @@ class Bitcask
 
   $LOAD_PATH << File.expand_path(File.dirname(__FILE__))
 
-  # A single data file
+  require 'bitcask/hint_file'
   require 'bitcask/data_file'
+  require 'bitcask/key_dir'
   require 'bitcask/errors'
   require 'bitcask/version'
 

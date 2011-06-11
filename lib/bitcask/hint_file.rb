@@ -1,10 +1,12 @@
-class Bitcask::DataFile
-  # A single Bitcask data file.
+class Bitcask::HintFile
+  # A single Bitcask hint file.
   #
   # This is most definitely not threadsafe, but it's so cheap you might as well
   # make lots of copies.
 
-  Entry = Struct.new :tstamp, :key, :value
+  Entry = Struct.new :tstamp, :value_sz, :value_pos, :key
+
+  include Enumerable
 
   def initialize(filename)
     @file = File.open(filename)
@@ -12,9 +14,9 @@ class Bitcask::DataFile
 
   # Reads [key, value] from a particular offset.
   # Also advances the cursor.
-  def [](offset, size = nil)
+  def [](offset)
     seek offset
-    read size
+    read
   end
  
   # Iterates over every entry in this file, yielding an Entry.
@@ -32,21 +34,13 @@ class Bitcask::DataFile
     rewind if options[:rewind]
 
     loop do
-      begin
-        o = read
-        if o
-          yield o
-        else
-          return self
-        end
-      rescue Bitcask::ChecksumError => e
-        raise e if options[:raise]
+      o = read
+      if o
+        yield o
+      else
+        return self
       end
     end
-  end
-
-  def hint_file
-    @hint_file ||= Bitcask::HintFile.new(@file.path.sub(/\.data$/, '.hint'))
   end
 
   def pos
@@ -54,29 +48,23 @@ class Bitcask::DataFile
   end
   alias tell pos
 
-  # Returns a single Entry read from the current offset, and advances to the
-  # next.
+  # Returns [timestamp, key, value_pos, value_size] read from the current
+  # offset, and advances to the next.
   #
   # Can raise Bitcask::ChecksumError
-  def read(size = nil)
-    if size
-      f = StringIO.new @file.read(size)
-    else
-      f = @file
-    end
-
+  def read
     # Parse header
-    header = f.read(14) or return
-    crc, tstamp, ksz, value_sz = header.unpack "NNnN"
-    
-    # Read data
-    key = f.read ksz
-    value = f.read value_sz
+    header = @file.read(18) or return
+    tstamp, ksz, value_sz, value_pos1, value_pos2 = header.unpack "NnNNN"
 
-    # CRC check
-    raise Bitcask::ChecksumError unless crc == Zlib.crc32(header[4..-1] + key + value)
+    # value_pos is an 8 byte big-endian number...
+    # For reference, reverse is [value_pos >> 32, value & 0xFFFFFFFF].pack("NN")
+    value_pos = (value_pos1 << 32) | value_pos2
 
-    Entry.new tstamp, key, value
+    # Read key
+    key = @file.read ksz
+
+    Entry.new tstamp, value_sz, value_pos, key
   end
 
   # Rewinds the file.

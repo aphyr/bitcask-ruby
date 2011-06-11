@@ -17,7 +17,6 @@ describe 'Bitcask' do
   before do
     @b = Bitcask.new ARGV.first
     @f = @b.data_files.first
-
   end
 
   should 'start at 0' do
@@ -40,10 +39,10 @@ describe 'Bitcask' do
   
     @f.pos.should == 0 
     entries << @f.read
-    entries[0].should.be.kind_of? Array
-    entries[0].size.should == 2
-    entries[0][0].should.be.kind_of? String
-    entries[0][1].should.be.kind_of? String
+    entries[0].should.be.kind_of? Bitcask::DataFile::Entry
+    entries[0].tstamp.should.be.kind_of? Integer
+    entries[0].key.should.be.kind_of? String
+    entries[0].value.should.be.kind_of? String
     @f.pos.should > 0
   end
 
@@ -66,8 +65,8 @@ describe 'Bitcask' do
     c = 0
     t1 = Time.now
     
-    @f.each do |k,v|
-      k.should.be.kind_of? String
+    @f.each do |e|
+      e.should.be.kind_of? Bitcask::DataFile::Entry
       c += 1
     end
 
