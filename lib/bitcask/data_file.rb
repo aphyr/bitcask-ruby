@@ -6,6 +6,8 @@ class Bitcask::DataFile
 
   Entry = Struct.new :tstamp, :key, :value
 
+  include Enumerable
+
   def initialize(filename)
     @file = File.open(filename)
   end
