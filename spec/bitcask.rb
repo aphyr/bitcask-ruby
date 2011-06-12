@@ -47,21 +47,16 @@ describe 'Bitcask' do
     @b.load
 
     @b.keydir.keys.each do |key|
-      e = @b[key]
-      e.should.be.kind_of? Bitcask::DataFile::Entry
-      e.key.should == key
-      e.value.should.be.kind_of? String
-      e.tstamp.should.be.kind_of? Integer
+      @b[key].should.be.kind_of String
     end
   end
 
   it 'each' do
     @b.load
 
-    @b.each do |entry|
-      entry.should.be.kind_of? Bitcask::DataFile::Entry
-      entry.key.should.be.kind_of? String
-      entry.value.should.be.kind_of? String
+    @b.each do |key, value|
+      key.should.be.kind_of? String
+      value.should.be.kind_of? String
     end
   end
 end

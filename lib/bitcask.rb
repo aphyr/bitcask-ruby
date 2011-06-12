@@ -22,10 +22,10 @@ class Bitcask
   end
 
   # Uses the keydir to get an object from the bitcask. Returns a
-  # Bitcask::DataFile::Entry.
+  # value.
   def [](key)
-    index = @keydir[key]
-    @keydir.data_files[index.file_id][index.value_pos, index.value_sz]
+    index = @keydir[key] or return nil
+    @keydir.data_files[index.file_id][index.value_pos, index.value_sz].value
   end
 
   # Returns a list of all data filenames in this bitcask, sorted from oldest
@@ -43,10 +43,11 @@ class Bitcask
     end
   end
 
-  # Iterates over all keys in keydir. Yields Bitcask::DataFile::Entries.
+  # Iterates over all keys in keydir. Yields key, value pairs.
   def each
     @keydir.each do |key, index|
-      yield @keydir.data_files[index.file_id][index.value_pos, index.value_sz]
+      entry = @keydir.data_files[index.file_id][index.value_pos, index.value_sz]
+      yield [entry.key, entry.value]
     end
   end
 
