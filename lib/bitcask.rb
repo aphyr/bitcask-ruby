@@ -1,5 +1,6 @@
 class Bitcask
   require 'zlib'
+  require 'stringio'
 
   $LOAD_PATH << File.expand_path(File.dirname(__FILE__))
 
