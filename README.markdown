@@ -17,20 +17,56 @@ Open a bitcask.
 
     b = Bitcask.new '/var/lib/riak/bitcask/0'
 
-Dump all keys and values, in cron order, excluding tombstones.
-Data files go in cronological order, so this is in effect replaying history.
+Load the keydir, using hintfiles where possible.
 
-    b.data_files.each do |data_file|
-      data_file.each do |key, value|
-        next if value == Bitcask::TOMBSTONE
-        puts key
-        puts value
+    b.load
+
+Get a specific entry:
+
+    b['test'] #=> 'value_of_test'
+
+Iterate over all values:
+
+    b.each do |key, value|
+      puts key
+      puts value
+    end
+
+In Riak, these are erlang terms.
+
+    b.each do |key, value|
+      next if value == Bitcask::TOMBSTONE
+
+      bucket, key = BERT.decode key
+      value = BERT.decode value
+
+      # Store the object's value in riak
+      o = riak[bucket][key]
+      o.raw_data = value.last
+      o.store
+
+      # Or dump the entire value to a file for later inspection.
+      FileUtils.mkdir_p(bucket)
+      File.open(File.join(bucket, key), 'w') do |out|
+        out.write value.to_json
       end
     end
 
-If you know the offset, you can retrieve it directly.
+You can also work directly on the data files. Here's how to dump all keys and
+values, in cron order, excluding tombstones. Data files go in cronological
+order, so this is in effect replaying history since the last merge.
 
-    data_file[0] # => ["key", "value"]
+    b.data_files.each do |data_file|
+      data_file.each do |entry|
+        next if entry.value == Bitcask::TOMBSTONE
+        puts entry.key
+        puts entry.value
+      end
+    end
+
+If you know the offset, you can retrieve it directly from a DataFile.
+
+    data_file[0] # => Struct {:key => 'key', :value => 'value'}
 
 And step through values one by one.
 
@@ -38,28 +74,6 @@ And step through values one by one.
     data_file.read # => [k2, v2]
 
 Seek, rewind, and pos are also supported.
-
-In Riak, these are erlang terms.
-
-    b.data_files.each do |data_file|
-      data_file.each do |key, value|
-        next if value == Bitcask::TOMBSTONE
-
-        bucket, key = BERT.decode key
-        value = BERT.decode value
-
-        # Store the object's value in riak
-        o = riak[bucket][key]
-        o.raw_data = value.last
-        o.store
-
-        # Or dump the entire value to a file for later inspection.
-        FileUtils.mkdir_p(bucket)
-        File.open(File.join(bucket, key), 'w') do |out|
-          out.write value.to_json
-        end
-      end
-    end
 
 You'd be surprised how fast this is. 10,000 values/sec, easy.
 
