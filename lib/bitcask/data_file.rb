@@ -48,7 +48,14 @@ class Bitcask::DataFile
   end
 
   def hint_file
-    @hint_file ||= Bitcask::HintFile.new(@file.path.sub(/\.data$/, '.hint'))
+    @hint_file ||= begin
+      path = @file.path.sub(/\.data$/, '.hint')
+      if File.exists? path
+        h = Bitcask::HintFile.new path
+        h.data_file = self
+        h
+      end
+    end
   end
 
   def pos

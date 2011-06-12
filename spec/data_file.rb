@@ -19,6 +19,10 @@ describe 'Bitcask' do
     @f = @b.data_files.first
   end
 
+  should 'have a hintfile' do
+    @f.hint_file.should.be.kind_of? Bitcask::HintFile
+  end
+
   should 'start at 0' do
     @f.pos.should == 0
   end

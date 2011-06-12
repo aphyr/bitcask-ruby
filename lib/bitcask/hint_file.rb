@@ -8,6 +8,7 @@ class Bitcask::HintFile
 
   include Enumerable
 
+  attr_accessor :data_file
   def initialize(filename)
     @file = File.open(filename)
   end

@@ -20,6 +20,10 @@ describe 'HintFile' do
     @h = @f.hint_file
   end
 
+  should 'have a data_file' do
+    @h.data_file.should.equal @f
+  end
+
   should 'start at 0' do
     @h.pos.should == 0
   end
