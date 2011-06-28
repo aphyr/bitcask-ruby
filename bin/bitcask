@@ -212,8 +212,13 @@ EOF
   # Dump an entry.
   def out(entry, opts = {})
     if opts[:riak]
+      # Riak
       bucket, key = BERT.decode entry.key
-      puts ANSI.style(:green) { "#{bucket}/#{key}" }
+      if opts[:color]
+        puts ANSI.style(:green) { "#{bucket}/#{key}" }
+      else
+        puts "#{bucket}/#{key}"
+      end
 
       if entry.respond_to? :value
         if opts[:verbose_values]
@@ -223,7 +228,12 @@ EOF
         end
       end
     else
-      puts ANSI.style(:green) { "#{entry.key}" }
+      # Not riak
+      if opts[:color]
+        puts ANSI.style(:green) { "#{entry.key}" }
+      else
+        puts "#{entry.key}"
+      end
       puts entry.value if entry.respond_to? :value
     end
   end
