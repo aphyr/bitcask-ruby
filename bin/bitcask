@@ -78,9 +78,9 @@ EOF
     entries = Dir.entries(directory).map do |f|
       next if f == '.' or f == '..'
       File.join(directory, f)
-    end
+    end.compact
 
-    if entries.any? { |e| File.file? e and e =~ /\.data$/ }
+    if entries.any? { |f| File.file? f and f =~ /\.data$/ }
       return [Bitcask.new(directory)]
     end
 
