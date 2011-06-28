@@ -24,11 +24,11 @@ EOF
 
       opt :key, "key", :type => :string
       opt :bucket, "bucket", :type => :string
-      opt :color, "Colorize output", :default => true
-      opt :riak, "Interpret buckets and keys as Riak does", :default => true
-      opt :keys, "Display keys", :default => true
-      opt :values, "Display values", :default => true
-      opt :verbose_values, "Display full riak values", :default => false
+      opt :no_color, "Do not colorize output"
+      opt :no_riak, "Do not interpret buckets and keys as Riak does"
+      opt :no_keys, "Do not display keys"
+      opt :no_values, "Do not display values"
+      opt :verbose_values, "Display full riak values"
       stop_on subcommands
     end
 
