@@ -32,6 +32,18 @@ EOF
       stop_on subcommands
     end
 
+    # Set no_x options.
+    opts = opts.inject({}) do |opts, pair|
+      k,v = pair
+      if k.to_s =~ /^no_(\w+)/
+        opts[$1.to_sym] = ! v
+      else
+        opts[k] = v
+      end
+
+      opts
+    end
+
     # Load bitcasks
     bitcasks = bitcasks(ARGV.shift)
     if bitcasks.empty?
