@@ -118,7 +118,6 @@ EOF
       # Taking advantage of the fact that erlang tuples are encoded as
       # tuple, Size, string, Size, Data, string, Size, Data
       p_raw_key = /#{pbucket}.+#{pkey}/
-      p p_raw_key
       lambda do |key, value|
         if p_raw_key === key
 
