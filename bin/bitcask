@@ -179,12 +179,16 @@ EOF
         if opts[:values] or not d.hint_file
           # Iterate over data files.
           d.each do |e|
-            out e, opts
+            if f[e.key, e.value]
+              out e, opts
+            end
           end
         else
           # Use hint files where possible.
           d.hint_file.each do |e|
-            out e, opts
+            if f[e.key, nil]
+              out e, opts
+            end
           end
         end
       end
