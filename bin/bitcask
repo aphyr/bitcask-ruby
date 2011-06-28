@@ -6,7 +6,7 @@ require 'ostruct'
 
 class Bitcask::Tool
   def run
-    subcommands = %w(count last get)
+    subcommands = %w(count last get dump)
 
     opts = Trollop::options do
       banner <<EOF
@@ -42,13 +42,12 @@ EOF
     command = ARGV.shift
     opts.merge!(
       case command
-        when 'last'
+        when 'count'
           Trollop::options do
             opt :key, "key", :type => :string
             opt :bucket, "bucket", :type => :string if opts[:riak]
-            opt :limit, 'results to return', :default => 1
           end
-        when 'count'
+        when 'dump'
           Trollop::options do
             opt :key, "key", :type => :string
             opt :bucket, "bucket", :type => :string if opts[:riak]
@@ -61,6 +60,12 @@ EOF
             }
           else
             {:key => ARGV.shift}
+          end
+        when 'last'
+          Trollop::options do
+            opt :key, "key", :type => :string
+            opt :bucket, "bucket", :type => :string if opts[:riak]
+            opt :limit, 'results to return', :default => 1
           end
         else
           Trollop::die "unknown command #{command.inspect}"
@@ -89,6 +94,15 @@ EOF
     end.flatten
   end
 
+  # Colorizes a string.
+  def color(color, str, opts)
+    if opts[:color]
+      ANSI.style(color) { str }
+    else
+      str
+    end
+  end
+
   def count(bitcasks, opts)
     f = filter opts
 
@@ -101,7 +115,28 @@ EOF
       sum + c
     end
 
-    p count
+    puts count
+  end
+
+  # Dump every record in each bitcask, cronologically.
+  def dump(bitcasks, opts)
+    f = filter opts
+
+    bitcasks.each do |bitcask|
+      bitcask.data_files.each do |d|
+        if opts[:values] or not d.hint_file
+          # Iterate over data files.
+          d.each do |e|
+            out e, opts
+          end
+        else
+          # Use hint files where possible.
+          d.hint_file.each do |e|
+            out e, opts
+          end
+        end
+      end
+    end
   end
 
   # Returns a proc to match bitcask entries.
@@ -213,14 +248,12 @@ EOF
     if opts[:riak]
       # Riak
       bucket, key = BERT.decode entry.key
-      if opts[:color]
-        puts ANSI.style(:green) { "#{bucket}/#{key}" }
-      else
-        puts "#{bucket}/#{key}"
-      end
+      puts color(:green, "#{bucket}/#{key}", opts)
 
       if entry.respond_to? :value
-        if opts[:verbose_values]
+        if entry[:value] == Bitcask::TOMBSTONE
+          puts color(:red, entry.value, opts)
+        elsif opts[:verbose_values]
           pp BERT.decode(entry.value)
         else
           puts BERT.decode(entry.value).last
@@ -228,11 +261,7 @@ EOF
       end
     else
       # Not riak
-      if opts[:color]
-        puts ANSI.style(:green) { "#{entry.key}" }
-      else
-        puts "#{entry.key}"
-      end
+      puts color(:green, entry.key, opts)
       puts entry.value if entry.respond_to? :value
     end
   end
