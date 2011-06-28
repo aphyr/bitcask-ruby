@@ -28,6 +28,7 @@ EOF
       opt :no_riak, "Do not interpret buckets and keys as Riak does"
       opt :no_keys, "Do not display keys"
       opt :no_values, "Do not display values"
+      opt :no_regexp, "Do not interpret patterns as regular expressions."
       opt :verbose_values, "Display full riak values"
       stop_on subcommands
     end
@@ -197,8 +198,8 @@ EOF
 
   # Returns a proc to match bitcask entries.
   def filter(opts)
-    pkey = pattern opts[:key]
-    pbucket = pattern opts[:bucket]
+    pkey = pattern opts[:key], opts
+    pbucket = pattern opts[:bucket], opts
 
     # Trivial case: don't filter anything.
     if pkey.nil? and pbucket.nil?
@@ -208,7 +209,9 @@ EOF
     if opts[:riak]
       # Taking advantage of the fact that erlang tuples are encoded as
       # tuple, Size, string, Size, Data, string, Size, Data
-      p_raw_key = /#{pbucket}.+#{pkey}/
+      bucket_part = pbucket.kind_of?(String) ? Regexp.escape(pbucket) : pbucket
+      key_part = pkey.kind_of?(String) ? Regexp.escape(pkey) : pkey
+      p_raw_key = /#{bucket_part}.+#{key_part}/
       lambda do |key, value|
         if p_raw_key === key
 
@@ -294,9 +297,14 @@ EOF
   end
 
   # Returns an object which uses === for comparison
-  def pattern(string)
+  def pattern(string, opts = {})
     return nil unless string
-    string
+
+    if opts[:regexp] and string =~ /[^A-Za-z0-0_]/
+      /#{string}/
+    else
+      string
+    end
   end
 
   # Dump an entry.
