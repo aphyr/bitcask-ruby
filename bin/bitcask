@@ -24,6 +24,7 @@ EOF
 
       opt :key, "key", :type => :string
       opt :bucket, "bucket", :type => :string
+      opt :value, "value", :type => :string
       opt :no_color, "Do not colorize output"
       opt :no_riak, "Do not interpret buckets and keys as Riak does"
       opt :no_keys, "Do not display keys"
@@ -97,7 +98,7 @@ EOF
     bitcasks.each do |bitcask|
       bitcask.load
 
-      if opts[:values]
+      if opts[:values] or opts[:value]
         bitcask.each do |key, value|
           if f[key, value]
             out KV.new(key, value), opts
@@ -200,9 +201,10 @@ EOF
   def filter(opts)
     pkey = pattern opts[:key], opts
     pbucket = pattern opts[:bucket], opts
+    pvalue = pattern opts[:value], opts
 
     # Trivial case: don't filter anything.
-    if pkey.nil? and pbucket.nil?
+    if pkey.nil? and pbucket.nil? and pvalue.nil?
       return lambda { |k, v| true }
     end
 
@@ -213,18 +215,20 @@ EOF
       key_part = pkey.kind_of?(String) ? Regexp.escape(pkey) : pkey
       p_raw_key = /#{bucket_part}.+#{key_part}/
       lambda do |key, value|
-        if p_raw_key === key
+        if p_raw_key === key or (pkey.nil? and pvalue.nil? and pvalue)
 
           # Confirm match.
           bucket, key = BERT.decode key
       
-          (not pkey or pkey === key) and 
-          (not pbucket or pbucket === bucket)
+          (not pkey or pkey === key) and
+          (not pbucket or pbucket === bucket) and
+          (not pvalue or pvalue === value)
         end
       end
     else
       lambda do |key, value|
-        (not pkey or pkey === key)
+        (not pkey or pkey === key) and
+        (not pvalue or pvalue === value)
       end
     end
   end
@@ -314,7 +318,7 @@ EOF
       bucket, key = BERT.decode entry.key
       puts color(:green, "#{bucket}/#{key}", opts)
 
-      if entry.respond_to? :value
+      if entry.respond_to? :value and opts[:values]
         if entry[:value] == Bitcask::TOMBSTONE
           puts color(:red, entry.value, opts)
         elsif opts[:verbose_values]
@@ -326,7 +330,9 @@ EOF
     else
       # Not riak
       puts color(:green, entry.key, opts)
-      puts entry.value if entry.respond_to? :value
+      if entry.respond_to? :value and opts[:values]
+        puts entry.value
+      end
     end
   end
 
