@@ -1,0 +1,228 @@
+#!/usr/bin/env ruby
+
+require File.expand_path("#{File.dirname(__FILE__)}/../lib/bitcask")
+require 'trollop'
+require 'ostruct'
+
+class Bitcask::Tool
+  def run
+    subcommands = %w(count last get)
+
+    opts = Trollop::options do
+      banner <<EOF
+Bitcask utility.
+
+bitcask <bitcask_dir> [options] <command> [subcommand options]
+
+Commands: #{subcommands.join(', ')}.
+
+Options:
+EOF
+
+      opt :color, "Colorize output", :default => true
+      opt :riak, "Interpret buckets and keys as Riak does", :default => true
+      opt :keys, "Display keys", :default => true
+      opt :values, "Display values", :default => true
+      opt :verbose_values, "Display full riak values", :default => false
+      stop_on subcommands
+    end
+
+    # Load bitcasks
+    bitcasks = bitcasks(ARGV.shift)
+    if bitcasks.empty?
+      Trollop::die "No bitcasks"
+    end
+
+    # Load libraries
+    require 'bert' if opts[:riak]
+    require 'ansi' if opts[:color]
+    require 'pp' if opts[:verbose_values]
+
+    # Subcommand options
+    command = ARGV.shift
+    opts.merge!(
+      case command
+        when 'last'
+          Trollop::options do
+            opt :key, "key", :type => :string
+            opt :bucket, "bucket", :type => :string if opts[:riak]
+            opt :limit, 'results to return', :default => 1
+          end
+        when 'count'
+          Trollop::options do
+            opt :key, "key", :type => :string
+            opt :bucket, "bucket", :type => :string if opts[:riak]
+          end
+        when 'get'
+          if opts[:riak]
+            {
+              :bucket => ARGV.shift,
+              :key =>  ARGV.shift
+            }
+          else
+            {:key => ARGV.shift}
+          end
+        else
+          Trollop::die "unknown command #{command.inspect}"
+      end
+    )
+
+    # Run commands
+    send command, bitcasks, opts
+  end
+
+  # Returns all bitcasks in directory.
+  def bitcasks(directory)
+    return false unless File.directory? directory
+
+    entries = Dir.entries(directory).map do |f|
+      next if f == '.' or f == '..'
+      File.join(directory, f)
+    end
+
+    if entries.any? { |e| File.file? e and e =~ /\.data$/ }
+      return [Bitcask.new(directory)]
+    end
+
+    entries.map do |e|
+      bitcasks e
+    end.flatten
+  end
+
+  def count(bitcasks, opts)
+    f = filter opts
+
+    count = bitcasks.map do |bitcask|
+      bitcask.load
+      count = bitcask.count do |key, value|
+        f[key, value]
+      end
+    end.inject do |sum, c|
+      sum + c
+    end
+
+    p count
+  end
+
+  # Returns a proc to match bitcask entries.
+  def filter(opts)
+    pkey = pattern opts[:key]
+
+    if opts[:riak]
+      pbucket = pattern opts[:bucket]
+      
+      lambda do |key, value|
+        bucket, key = BERT.decode key
+      
+        (not pkey or pkey === key) and 
+        (not pbucket or pbucket === bucket)
+      end
+    else
+      lambda do |key, value|
+        (not pkey or pkey === key)
+      end
+    end
+  end
+ 
+  # Get a specific value.
+  def get(bitcasks, opts)
+    if opts[:riak]
+      t = BERT::Tuple.new
+      t << opts[:bucket]
+      t << opts[:key]
+      key = BERT::encode t
+    else
+      key = opts[:key]
+    end
+
+    key.force_encoding('BINARY')
+    value = bitcasks.inject(nil) do |value, bitcask|
+      value or begin
+        bitcask.load
+        bitcask[key]
+      end
+    end
+    
+    if value
+      out OpenStruct.new('key' => key, 'value' => value), opts
+    end
+  end
+
+  # Dump the last few items from some bitcasks.
+  def last(bitcasks, opts)
+    f = filter opts
+
+    buffers = bitcasks.map do |bitcask|
+      buffer = Array.new opts[:limit]
+
+      bitcask.data_files.each do |d|
+        # Get hint file
+        unless h = d.hint_file
+          warn "No hint file for #{d.inspect}"
+          next
+        end
+    
+        # Run over hintfile    
+        h.each do |e|
+          if f[e.key, nil]
+            buffer.shift
+            buffer << [d, e]
+          end
+        end
+      end
+
+      buffer.compact
+    end
+
+    # Merge buffers.
+    buffer = buffers.flatten(1).sort do |a, b|
+      p a
+      p b
+      a[1].timestamp <=> b[1].timestamp
+    end.last(opts[:limit])
+    
+    # Display buffers.  
+    buffer.map do |d, e|
+      if opts[:values]
+        d[e.value_pos, e.value_sz]
+      else
+        e
+      end
+    end.each do |e|
+      out e, opts
+    end
+  end
+
+  # Returns an object which uses === for comparison
+  def pattern(string)
+    return nil unless string
+    string
+  end
+
+  # Dump an entry.
+  def out(entry, opts = {})
+    if opts[:riak]
+      bucket, key = BERT.decode entry.key
+      puts ANSI.style(:green) { "#{bucket}/#{key}" }
+
+      if entry.respond_to? :value
+        if opts[:verbose_values]
+          pp BERT.decode(entry.value)
+        else
+          puts BERT.decode(entry.value).last
+        end
+      end
+    else
+      puts ANSI.style(:green) { "#{entry.key}" }
+      puts entry.value if entry.respond_to? :value
+    end
+  end
+
+  def warn(s)
+    puts s
+  end
+end
+
+if $0 == __FILE__
+  Bitcask::Tool.new.run
+end
