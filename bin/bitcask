@@ -131,19 +131,31 @@ EOF
     end
   end
 
+  # Count all the keys matching opts
   def count(bitcasks, opts)
     f = filter opts
 
-    count = bitcasks.map do |bitcask|
-      bitcask.load
-      count = bitcask.count do |key, value|
-        f[key, value]
+    require 'set'
+    keys = Set.new
+    bitcasks.each do |bitcask|
+      bitcask.data_files.each do |d|
+        if h = d.hint_file
+          h.each do |e|
+            if f[e.key, nil]
+              keys << e.key
+            end
+          end
+        else
+          d.each do |e|
+            if f[e.key, e.value]
+              keys << e.key
+            end
+          end
+        end
       end
-    end.inject do |sum, c|
-      sum + c
     end
 
-    puts count
+    puts keys.size
   end
 
   # Dump every record in each bitcask, cronologically.
