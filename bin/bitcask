@@ -107,15 +107,27 @@ EOF
   # Returns a proc to match bitcask entries.
   def filter(opts)
     pkey = pattern opts[:key]
+    pbucket = pattern opts[:bucket]
+
+    # Trivial case: don't filter anything.
+    if pkey.nil? and pbucket.nil?
+      return lambda { |k, v| true }
+    end
 
     if opts[:riak]
-      pbucket = pattern opts[:bucket]
-      
+      # Taking advantage of the fact that erlang tuples are encoded as
+      # tuple, Size, string, Size, Data, string, Size, Data
+      p_raw_key = /#{pbucket}.+#{pkey}/
+      p p_raw_key
       lambda do |key, value|
-        bucket, key = BERT.decode key
+        if p_raw_key === key
+
+          # Confirm match.
+          bucket, key = BERT.decode key
       
-        (not pkey or pkey === key) and 
-        (not pbucket or pbucket === bucket)
+          (not pkey or pkey === key) and 
+          (not pbucket or pbucket === bucket)
+        end
       end
     else
       lambda do |key, value|
