@@ -5,6 +5,9 @@ require 'trollop'
 require 'ostruct'
 
 class Bitcask::Tool
+  K = Struct.new :key
+  KV = Struct.new :key, :value
+
   def run
     subcommands = %w(count last get dump)
 
@@ -19,6 +22,8 @@ Commands: #{subcommands.join(', ')}.
 Options:
 EOF
 
+      opt :key, "key", :type => :string
+      opt :bucket, "bucket", :type => :string
       opt :color, "Colorize output", :default => true
       opt :riak, "Interpret buckets and keys as Riak does", :default => true
       opt :keys, "Display keys", :default => true
@@ -42,16 +47,12 @@ EOF
     command = ARGV.shift
     opts.merge!(
       case command
+        when 'all'
+          {}
         when 'count'
-          Trollop::options do
-            opt :key, "key", :type => :string
-            opt :bucket, "bucket", :type => :string if opts[:riak]
-          end
+          {}
         when 'dump'
-          Trollop::options do
-            opt :key, "key", :type => :string
-            opt :bucket, "bucket", :type => :string if opts[:riak]
-          end
+          {}
         when 'get'
           if opts[:riak]
             {
@@ -63,8 +64,6 @@ EOF
           end
         when 'last'
           Trollop::options do
-            opt :key, "key", :type => :string
-            opt :bucket, "bucket", :type => :string if opts[:riak]
             opt :limit, 'results to return', :default => 1
           end
         else
@@ -74,6 +73,35 @@ EOF
 
     # Run commands
     send command, bitcasks, opts
+  end
+
+  # Returns all the data in a set of bitcasks.
+  # This differs from dump in that it loads the keydir, so it shows
+  # only the most recent values.
+  def all(bitcasks, opts)
+    f = filter opts
+
+    bitcasks.each do |bitcask|
+      bitcask.load
+
+      if opts[:values]
+        bitcask.each do |key, value|
+          if f[key, value]
+            out KV.new(key, value), opts
+          end
+        end
+      else
+        # Use the keydir alone.
+        bitcask.keydir.each do |key, e|
+          if f[key, nil]
+            out K.new(key), opts
+          end
+        end
+      end
+
+      # Let GC do its thing.
+      bitcask.keydir = nil
+    end
   end
 
   # Returns all bitcasks in directory.
