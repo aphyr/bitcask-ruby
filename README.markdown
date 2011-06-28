@@ -77,6 +77,35 @@ Seek, rewind, and pos are also supported.
 
 You'd be surprised how fast this is. 10,000 values/sec, easy.
 
+Utility
+-------
+
+bin/bitcask is a small tool to inspect bitcask files. It's designed for
+integration with Riak (parsing keys as erlang {bucket, key} tuples, for
+instance), but can be content agnostic as well. It uses various tricks to do
+things quickly, like only scanning hintfiles when values aren't involved.
+
+Show all comments.
+
+    bitcask /var/lib/riak --bucket comments all
+
+Get the keys of the last 10 users written to bitcask, without color.
+
+    bitcask /var/lib/riak --bucket users --no-values --no-color last --limit 10
+
+Show the full structure of a given user. Here the two arguments after `get`
+are presumed to be --bucket and --key.
+
+    bitcask /var/lib/riak --verbose-values --no-keys get users sauron
+
+Show all the changes to a given key and value over time.
+
+    bitcask /var/lib/riak --bucket users --key sauron dump
+
+Count a bucket in a specific bitcask.
+
+    bitcask /var/lib/riak/bitcask/0 --bucket magic_rings count
+
 Status
 ------
 
