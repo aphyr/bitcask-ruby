@@ -87,20 +87,20 @@ things quickly, like only scanning hintfiles when values aren't involved.
 
 Show all comments.
 
-    bitcask /var/lib/riak --bucket comments all
+    bitcask /var/lib/riak --bucket comments --color all
 
-Get the keys of the last 10 users written to bitcask, without color.
+Get the keys of the last 10 users written to bitcask
 
-    bitcask /var/lib/riak --bucket users --no-values --no-color last --limit 10
+    bitcask /var/lib/riak --bucket users --color -f '%k' last --limit 10
 
 Show the full structure of a given user. Here the two arguments after `get`
 are presumed to be --bucket and --key.
 
-    bitcask /var/lib/riak --verbose-values --no-keys get users sauron
+    bitcask /var/lib/riak --verbose-values get users sauron
 
 Show all the changes to a given key and value over time.
 
-    bitcask /var/lib/riak --bucket users --key sauron dump
+    bitcask /var/lib/riak --bucket users --key sauron --format '%v' dump
 
 Count a bucket in a specific bitcask.
 
