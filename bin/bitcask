@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require File.expand_path("#{File.dirname(__FILE__)}/../lib/bitcask")
+require 'rubygems'
 require 'trollop'
 require 'ostruct'
 
@@ -27,9 +28,13 @@ EOF
       opt :value, "value", :type => :string
       opt :no_color, "Do not colorize output"
       opt :no_riak, "Do not interpret buckets and keys as Riak does"
-      opt :no_keys, "Do not display keys"
-      opt :no_values, "Do not display values"
+      opt :no_values, "Do not process values"
       opt :no_regexp, "Do not interpret patterns as regular expressions."
+      opt :format, "Output format string.
+%b: Bucket
+%k: Key
+%v: Value
+      ", :type => :string
       opt :verbose_values, "Display full riak values"
       stop_on subcommands
     end
@@ -120,7 +125,7 @@ EOF
 
   # Returns all bitcasks in directory.
   def bitcasks(directory)
-    return false unless File.directory? directory
+    return [] unless File.directory? directory
 
     entries = Dir.entries(directory).map do |f|
       next if f == '.' or f == '..'
@@ -311,29 +316,43 @@ EOF
     end
   end
 
-  # Dump an entry.
+  # Output an entry.
   def out(entry, opts = {})
+    # Value
+    if entry.respond_to? :value and entry.value == Bitcask::TOMBSTONE
+      svalue = color :red, entry.value, opts
+    end
+ 
     if opts[:riak]
       # Riak
-      bucket, key = BERT.decode entry.key
-      puts color(:green, "#{bucket}/#{key}", opts)
+      format = opts[:format] || "%b/%k\n%v"
 
-      if entry.respond_to? :value and opts[:values]
-        if entry[:value] == Bitcask::TOMBSTONE
-          puts color(:red, entry.value, opts)
-        elsif opts[:verbose_values]
-          pp BERT.decode(entry.value)
+      bucket, key = BERT.decode entry.key
+      
+      sbucket = color :green, bucket, opts
+      skey = color :green, key, opts
+
+      svalue ||= begin
+        value = BERT.decode entry.value
+        if opts[:verbose_values]
+          svalue = PP.pp(value, '')
         else
-          puts BERT.decode(entry.value).last
+          svalue = value.last.to_s
         end
       end
     else
       # Not riak
-      puts color(:green, entry.key, opts)
-      if entry.respond_to? :value and opts[:values]
-        puts entry.value
-      end
+      format = opts[:format] || "%k\n%v"
+      skey = color :green, entry.key, opts
+      svalue ||= entry.value
+      sbucket = ''
     end
+  
+    # Format
+    s = format.gsub('%k', skey).gsub('%v', svalue).gsub('%b', sbucket)
+
+    puts s
+    s
   end
 
   def warn(s)
