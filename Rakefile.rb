@@ -22,8 +22,8 @@ gemspec = Gem::Specification.new do |s|
   s.platform = Gem::Platform::RUBY
   s.summary = 'An (incomplete) interface to the Bitcask storage system'
  
-  s.files = FileList['{lib}/**/*', 'LICENSE', 'README.markdown'].to_a
-  s.executables = []
+  s.files = FileList['{bin,lib}/**/*', 'LICENSE', 'README.markdown'].to_a
+  s.executables = ['bitcask']
   s.require_path = 'lib'
   s.has_rdoc = true
  
