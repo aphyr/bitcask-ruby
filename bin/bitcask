@@ -103,15 +103,19 @@ EOF
     bitcasks.each do |bitcask|
       bitcask.load
 
-      if opts[:values] or opts[:value]
-        bitcask.each do |key, value|
-          if f[key, value]
-            out KV.new(key, value), opts
+      if opts[:value]
+        bitcask.keydir.each_key do |key|
+          if f[key, nil]
+            # Get the value
+            value = bitcask[key]
+            if f[key, value]
+              out KV.new(key, value), opts
+            end
           end
         end
       else
         # Use the keydir alone.
-        bitcask.keydir.each do |key, e|
+        bitcask.keydir.each_key do |key|
           if f[key, nil]
             out K.new(key), opts
           end
@@ -219,21 +223,22 @@ EOF
       bucket_part = pbucket.kind_of?(String) ? Regexp.escape(pbucket) : pbucket
       key_part = pkey.kind_of?(String) ? Regexp.escape(pkey) : pkey
       p_raw_key = /#{bucket_part}.+#{key_part}/
+  
       lambda do |key, value|
         if p_raw_key === key or (pkey.nil? and pvalue.nil? and pvalue)
 
           # Confirm match.
           bucket, key = BERT.decode key
-      
+     
           (not pkey or pkey === key) and
           (not pbucket or pbucket === bucket) and
-          (not pvalue or pvalue === value)
+          (not pvalue or !value or pvalue === value)
         end
       end
     else
       lambda do |key, value|
         (not pkey or pkey === key) and
-        (not pvalue or pvalue === value)
+        (not pvalue or !value or pvalue === value)
       end
     end
   end
