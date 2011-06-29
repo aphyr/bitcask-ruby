@@ -26,7 +26,7 @@ EOF
       opt :key, "key", :type => :string
       opt :bucket, "bucket", :type => :string
       opt :value, "value", :type => :string
-      opt :no_color, "Do not colorize output"
+      opt :color, "Colorize output"
       opt :no_riak, "Do not interpret buckets and keys as Riak does"
       opt :no_values, "Do not process values"
       opt :no_regexp, "Do not interpret patterns as regular expressions."
