@@ -165,7 +165,12 @@ EOF
         if h = d.hint_file
           h.each do |e|
             if f[e.key, nil]
-              keys << e.key
+              e = d[e.value_pos, e.value_sz]
+              if e.value == Bitcask::TOMBSTONE
+                keys.delete e.key
+              elsif f[e.key, e.value]
+                keys << e.key
+              end
             end
           end
         else
