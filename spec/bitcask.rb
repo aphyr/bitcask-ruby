@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'rubygems'
 require 'bacon'
 require "#{File.expand_path(File.dirname(__FILE__))}/../lib/bitcask"
 
@@ -58,5 +57,20 @@ describe 'Bitcask' do
       key.should.be.kind_of? String
       value.should.be.kind_of? String
     end
+  end
+
+  it 'close' do
+    @b.load
+    files = @b.keydir.data_files.map do |d| 
+      [
+        d.instance_variable_get('@file'),
+        d.instance_variable_get('@hint_file').instance_variable_get('@file')
+      ]
+    end.flatten
+
+    files.should.not.be.empty
+    @b.close
+    @b.keydir.should == nil
+    files.should.all? { |f| f.closed? }
   end
 end

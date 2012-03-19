@@ -29,6 +29,27 @@ class Bitcask
     @keydir.data_files[index.file_id][index.value_pos, index.value_sz].value
   end
 
+  # Close filehandles and keydir
+  def close
+    close_filehandles
+    close_keydir
+  end
+
+  # Close all filehandles loaded by the keydir.
+  def close_filehandles
+    @keydir.data_files.each do |data_file|
+      data_file.close
+      if h = data_file.instance_variable_get('@hint_file')
+        h.close
+      end
+    end  
+  end
+
+  # Close the keydir.
+  def close_keydir
+    @keydir = nil
+  end
+
   # Returns a list of all data filenames in this bitcask, sorted from oldest
   # to newest.
   def data_file_names

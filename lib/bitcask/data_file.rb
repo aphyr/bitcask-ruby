@@ -18,6 +18,10 @@ class Bitcask::DataFile
     seek offset
     read size
   end
+
+  def close
+    @file.close
+  end
  
   # Iterates over every entry in this file, yielding an Entry.
   # Options:

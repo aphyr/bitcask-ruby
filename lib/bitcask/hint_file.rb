@@ -19,7 +19,11 @@ class Bitcask::HintFile
     seek offset
     read
   end
- 
+
+  def close
+    @file.close
+  end
+
   # Iterates over every entry in this file, yielding an Entry.
   # Options:
   #  :rewind (true) - Rewind the file to the beginning, instead of starting
